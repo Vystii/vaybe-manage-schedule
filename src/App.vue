@@ -1,41 +1,79 @@
 <template>
-  <div id="app">
-    <!-- Table for displaying timeslot and schedules -->
-    <div v-if="timeSlots.length > 0">
-      <DataTable :value="timeSlots">
-        <Column field="time" header="Time">
-          <template #body="slotProps">
-            {{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}
-          </template>
-        </Column>
-        <Column v-for="day in weekdays" :key="day" :field="day" :header="day">
-          <template #body="slotProps">
-            <div v-for="description in slotProps.data[day]" :key="description">
-              {{ description }}
+  <!-- Table for displaying timeslot and schedules -->
+  <div v-if="timeSlots.length > 0">
+    <DataTable :value="timeSlots">
+      <Column field="time" header="Time">
+        <template #body="slotProps">
+          {{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}
+        </template>
+      </Column>
+      <Column v-for="day in weekdays" :key="day" :field="day" :header="day">
+        <template #body="slotProps">
+          <div
+            v-if="slotProps.data[day] && slotProps.data[day].length > 0"
+            @click="openDialog(slotProps.data[day])"
+          >
+            <div v-for="cell_schedule in slotProps.data[day]" :key="cell_schedule.id">
+              {{ cell_schedule.description }}
             </div>
-          </template>
-        </Column>
-      </DataTable>
-    </div>
+          </div>
+        </template>
+      </Column>
+    </DataTable>
   </div>
+
+  <!-- Dialog for showing course details -->
+  <Dialog v-model:visible="dialogVisible" modal>
+    <template v-if="dialogData.length === 1">
+      <h2>{{ dialogData[0].title }}</h2>
+      <p><strong>Room:</strong> {{ dialogData[0].roomId }}</p>
+      <p><strong>Class:</strong> {{ dialogData[0].classId }}</p>
+    </template>
+    <template v-else>
+      <div v-for="course in dialogData" :key="course.id" @click="openDialog([course])">
+        <h2>{{ course.title }}</h2>
+      </div>
+    </template>
+  </Dialog>
 </template>
+
 <script lang="ts">
-import ManageSchedules from './components/ManageSchedules.vue'
+// import ManageSchedules from './components/ManageSchedules.vue'
 import { schedules as temp } from './configs'
 import axios from 'axios'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import type { Slot } from 'vue'
+import { idText } from 'typescript'
 
 interface Schedule {
-  id: number
+  id: number | string
+  title: string
   description: string
   classId: string
   roomId: string
   courseId: string
   startTime: string
   endTime: string
-  weekday: string
+  weekday?: string
+}
+
+interface Room {
+  id: string
+  name: string
+  capacity: number
+}
+
+interface DBSchedule {
+  id: number | string
+  title: string
+  description: string
+  presentation: string
+  classId: string
+  room: Room
+  courseId: string
+  timeSlot: { startTime: string; endTime: string; dayOfWeek: number }
 }
 
 interface Settings {
@@ -49,17 +87,26 @@ interface intervalle {
   end: string
 }
 
+interface SlotProp {
+  id: string
+  description: string
+}
 interface TimeSlot {
   time: intervalle
-  [key: string]: string[] | intervalle | undefined
+  [key: string]: SlotProp[] | intervalle | undefined
 }
 
 export default {
   name: 'App',
+  props: {
+    schedule_source: String,
+    course_url: String,
+  },
   components: {
-    ManageSchedules,
+    // ManageSchedules,
     DataTable,
     Column,
+    Dialog,
   },
   data() {
     return {
@@ -76,6 +123,8 @@ export default {
         Sat: 'Saturday',
         Sun: 'Sunday',
       } as Record<string, string>,
+      dialogVisible: false,
+      dialogData: [] as Schedule[],
     }
   },
   methods: {
@@ -130,7 +179,10 @@ export default {
         const matchingTimeSlot = this.timeSlots.find((slot) => slot.time.start === scheduleStart)
         if (matchingTimeSlot) {
           if (Array.isArray(matchingTimeSlot[fullWeekday])) {
-            matchingTimeSlot[fullWeekday]?.push(schedule.description)
+            matchingTimeSlot[fullWeekday]?.push({
+              description: schedule.description,
+              id: schedule.id.toString(),
+            })
           }
         }
       })
@@ -142,7 +194,7 @@ export default {
         .get(`/scheduling/api/settings/${settingsId}`)
         .then((response) => {
           this.settings = response.data as Settings
-          console.log('Settings fetched successfully:', this.settings)
+          console.log('django Settings successfully:', response.data)
           // Call buildDataTable after fetching settings
           this.buildDataTable()
         })
@@ -151,29 +203,80 @@ export default {
         })
     },
     fetchSchedules() {
-      // Simulate fetching schedules
-      this.schedules = temp.map((item) => {
-        const startTime = new Date(item.startTime)
-        const endTime = new Date(item.endTime)
-        const options = { weekday: 'short' as const } // Define options for formatting weekday
-        const weekday = startTime.toLocaleDateString(undefined, options).slice(0, 3) // Extract abbreviated weekday
-        const startHour = startTime.getHours()
-        const startMinute = startTime.getMinutes()
-        const endHour = endTime.getHours()
-        const endMinute = endTime.getMinutes()
+      console.log('fecteching schedules', this.schedule_source)
+      axios.get(this.schedule_source).then((response) => {
+        // this.schedules = response.data
+        // Simulate fetching schedules
+        console.log('reponse: ', response)
+        this.schedules = response.data.map((item: DBSchedule) => {
+          const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+          const startTime = new Date(item.timeSlot.startTime)
+          const endTime = new Date(item.timeSlot.endTime)
+          // const options = { weekday: 'short' as const } // Define options for formatting weekday
+          const weekday = weekdays[item.timeSlot.dayOfWeek] // Extract abbreviated weekday
+          const startHour = startTime.getHours()
+          const startMinute = startTime.getMinutes()
+          const endHour = endTime.getHours()
+          const endMinute = endTime.getMinutes()
 
-        return {
-          id: item.id,
-          description: item.description,
-          weekday: weekday,
-          roomId: item.roomId,
-          classId: item.classId,
-          startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
-          endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
-        }
+          return {
+            id: item.id,
+            title: item.title,
+            description: item.title,
+            weekday: weekday,
+            courseId: item.courseId,
+            roomId: item.room.id,
+            classId: item.classId,
+            startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
+            endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
+          }
+        })
+        console.log('Schedules django successfully:', this.schedules)
       })
+      // Simulate fetching schedules
+      // this.schedules = temp.map((item: Schedule) => {
+      //   const startTime = new Date(item.startTime)
+      //   const endTime = new Date(item.endTime)
+      //   const options = { weekday: 'short' as const } // Define options for formatting weekday
+      //   const weekday = startTime.toLocaleDateString(undefined, options).slice(0, 3) // Extract abbreviated weekday
+      //   const startHour = startTime.getHours()
+      //   const startMinute = startTime.getMinutes()
+      //   const endHour = endTime.getHours()
+      //   const endMinute = endTime.getMinutes()
 
-      console.log('Schedules fetched successfully:', this.schedules)
+      //   return {
+      //     id: item.id,
+      //     title: item.title,
+      //     description: item.description,
+      //     weekday: weekday,
+      //     roomId: item.roomId,
+      //     classId: item.classId,
+      //     startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
+      //     endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
+      //   }
+      // })
+
+      // console.log('Schedules fetched successfully:', this.schedules)
+    },
+    openDialog(data: SlotProp[]) {
+      console.log(data)
+      this.dialogData = this.schedules.filter((schedule) => {
+        let found = false
+        let i = 0
+        while (i < data.length && !found) {
+          if (Number(data[i].id) == schedule.id) {
+            found = true
+          }
+          ++i
+        }
+        return found
+      })
+      this.dialogVisible = true
+    },
+    closeDialog() {
+      alert('closing')
+      this.dialogVisible = false
+      this.dialogData = []
     },
   },
   mounted() {
