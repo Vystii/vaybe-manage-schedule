@@ -25,9 +25,23 @@
   <!-- Dialog for showing course details -->
   <Dialog v-model:visible="dialogVisible" modal>
     <template v-if="dialogData.length === 1">
-      <h2>{{ dialogData[0].title }}</h2>
-      <p><strong>Room:</strong> {{ dialogData[0].roomId }}</p>
-      <p><strong>Class:</strong> {{ dialogData[0].classId }}</p>
+      <div class="model-content space-inner-px space-inner-py pt-5">
+        <h2>{{ dialogData[0].title }}</h2>
+        <div class="d-flex justify-content-between modal-content-row">
+          <span class="fw-bold">Room:</span> <span>{{ dialogData[0].roomId }}</span>
+        </div>
+        <div class="d-flex justify-content-between modal-content-row">
+          <span class="fw-bold">Class:</span> <span>{{ dialogData[0].classId }}</span>
+        </div>
+        <!-- ajout d'un bouton -->
+        <button
+          class="btn btn-primary text-white fw-bolder px-5 border-radius-10 mt-5"
+          v-if="course_url"
+          @click="openCourse(dialogData[0].courseId)"
+        >
+          see more
+        </button>
+      </div>
     </template>
     <template v-else>
       <div v-for="course in dialogData" :key="course.id" @click="openDialog([course])">
@@ -39,13 +53,10 @@
 
 <script lang="ts">
 // import ManageSchedules from './components/ManageSchedules.vue'
-import { schedules as temp } from './configs'
 import axios from 'axios'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
-import type { Slot } from 'vue'
-import { idText } from 'typescript'
 
 interface Schedule {
   id: number | string
@@ -99,8 +110,14 @@ interface TimeSlot {
 export default {
   name: 'App',
   props: {
-    schedule_source: String,
-    course_url: String,
+    schedule_source: {
+      type: String,
+      default: '/scheduling/api/schedules',
+    },
+    course_url: {
+      type: String,
+      default: '/course-manager/course/[id]',
+    },
   },
   components: {
     // ManageSchedules,
@@ -169,6 +186,11 @@ export default {
       // Call generateSchedule after building timeslots
       this.generateSchedule()
     },
+    openCourse(id: string) {
+      //replace [id] in course_url with the id of the course
+      const url = this.course_url.replace('[id]', id)
+      window.location.href = url
+    },
     generateSchedule() {
       if (!this.schedules.length || !this.timeSlots.length) return
 
@@ -233,30 +255,6 @@ export default {
         })
         console.log('Schedules django successfully:', this.schedules)
       })
-      // Simulate fetching schedules
-      // this.schedules = temp.map((item: Schedule) => {
-      //   const startTime = new Date(item.startTime)
-      //   const endTime = new Date(item.endTime)
-      //   const options = { weekday: 'short' as const } // Define options for formatting weekday
-      //   const weekday = startTime.toLocaleDateString(undefined, options).slice(0, 3) // Extract abbreviated weekday
-      //   const startHour = startTime.getHours()
-      //   const startMinute = startTime.getMinutes()
-      //   const endHour = endTime.getHours()
-      //   const endMinute = endTime.getMinutes()
-
-      //   return {
-      //     id: item.id,
-      //     title: item.title,
-      //     description: item.description,
-      //     weekday: weekday,
-      //     roomId: item.roomId,
-      //     classId: item.classId,
-      //     startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
-      //     endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
-      //   }
-      // })
-
-      // console.log('Schedules fetched successfully:', this.schedules)
     },
     openDialog(data: SlotProp[]) {
       console.log(data)

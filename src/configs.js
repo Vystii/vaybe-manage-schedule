@@ -1,3 +1,28 @@
+const _scheduleMap = (schedules_) => {
+  const schedules = schedules_.map((item) => {
+    const startTime = new Date(item.startTime)
+    const endTime = new Date(item.endTime)
+    const options = { weekday: 'short' } // Define options for formatting weekday
+    const weekday = startTime.toLocaleDateString(undefined, options).slice(0, 3) // Extract abbreviated weekday
+    const startHour = startTime.getHours()
+    const startMinute = startTime.getMinutes()
+    const endHour = endTime.getHours()
+    const endMinute = endTime.getMinutes()
+
+    return {
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      weekday: weekday,
+      roomId: item.roomId,
+      classId: item.classId,
+      startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
+      endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
+    }
+  })
+  console.log('Schedules fetched successfully:', this.schedules)
+  return schedules
+}
 const _schedules = [
   {
     id: 1,
@@ -16,8 +41,8 @@ const _schedules = [
     classId: 'C2',
     roomId: 'R2',
     courseId: 'P201',
-    startTime: '2024-12-20T11:15:00', // 15 minutes pause
-    endTime: '2024-12-20T14:15:00',
+    startTime: '2024-12-20T08:00:00', // Overlapping with Math 101
+    endTime: '2024-12-20T11:00:00',
   },
   {
     id: 3,
@@ -26,8 +51,8 @@ const _schedules = [
     classId: 'C3',
     roomId: 'R3',
     courseId: 'C101',
-    startTime: '2024-12-20T14:30:00', // 15 minutes pause
-    endTime: '2024-12-20T17:30:00',
+    startTime: '2024-12-20T11:15:00', // 15 minutes pause
+    endTime: '2024-12-20T14:15:00',
   },
   {
     id: 4,
@@ -36,8 +61,8 @@ const _schedules = [
     classId: 'C4',
     roomId: 'R4',
     courseId: 'B101',
-    startTime: '2024-12-21T08:00:00',
-    endTime: '2024-12-21T11:00:00',
+    startTime: '2024-12-20T11:15:00', // Overlapping with Chemistry 101
+    endTime: '2024-12-20T14:15:00',
   },
   {
     id: 5,
@@ -46,8 +71,8 @@ const _schedules = [
     classId: 'C1',
     roomId: 'R1',
     courseId: 'M102',
-    startTime: '2024-12-21T11:15:00', // 15 minutes pause
-    endTime: '2024-12-21T14:15:00',
+    startTime: '2024-12-20T14:30:00', // 15 minutes pause
+    endTime: '2024-12-20T17:30:00',
   },
   {
     id: 6,
@@ -56,8 +81,8 @@ const _schedules = [
     classId: 'C2',
     roomId: 'R2',
     courseId: 'P202',
-    startTime: '2024-12-21T14:30:00', // 15 minutes pause
-    endTime: '2024-12-21T17:30:00',
+    startTime: '2024-12-20T14:30:00', // Overlapping with Math 102
+    endTime: '2024-12-20T17:30:00',
   },
   {
     id: 7,
@@ -66,8 +91,8 @@ const _schedules = [
     classId: 'C3',
     roomId: 'R3',
     courseId: 'C102',
-    startTime: '2024-12-22T08:00:00',
-    endTime: '2024-12-22T11:00:00',
+    startTime: '2024-12-21T08:00:00',
+    endTime: '2024-12-21T11:00:00',
   },
   {
     id: 8,
@@ -76,8 +101,8 @@ const _schedules = [
     classId: 'C4',
     roomId: 'R4',
     courseId: 'B102',
-    startTime: '2024-12-22T11:15:00', // 15 minutes pause
-    endTime: '2024-12-22T14:15:00',
+    startTime: '2024-12-21T08:00:00', // Overlapping with Chemistry 102
+    endTime: '2024-12-21T11:00:00',
   },
   {
     id: 9,
@@ -86,8 +111,8 @@ const _schedules = [
     classId: 'C1',
     roomId: 'R1',
     courseId: 'M103',
-    startTime: '2024-12-22T14:30:00', // 15 minutes pause
-    endTime: '2024-12-22T17:30:00',
+    startTime: '2024-12-21T11:15:00', // 15 minutes pause
+    endTime: '2024-12-21T14:15:00',
   },
   {
     id: 10,
@@ -96,8 +121,8 @@ const _schedules = [
     classId: 'C2',
     roomId: 'R2',
     courseId: 'P203',
-    startTime: '2024-12-23T08:00:00',
-    endTime: '2024-12-23T11:00:00',
+    startTime: '2024-12-21T11:15:00', // Overlapping with Math 103
+    endTime: '2024-12-21T14:15:00',
   },
   {
     id: 11,
@@ -106,8 +131,8 @@ const _schedules = [
     classId: 'C3',
     roomId: 'R3',
     courseId: 'C103',
-    startTime: '2024-12-23T11:15:00', // 15 minutes pause
-    endTime: '2024-12-23T14:15:00',
+    startTime: '2024-12-21T14:30:00', // 15 minutes pause
+    endTime: '2024-12-21T17:30:00',
   },
   {
     id: 12,
@@ -116,8 +141,8 @@ const _schedules = [
     classId: 'C4',
     roomId: 'R4',
     courseId: 'B103',
-    startTime: '2024-12-23T14:30:00', // 15 minutes pause
-    endTime: '2024-12-23T17:30:00',
+    startTime: '2024-12-21T14:30:00', // Overlapping with Chemistry 103
+    endTime: '2024-12-21T17:30:00',
   },
   {
     id: 13,
@@ -126,8 +151,8 @@ const _schedules = [
     classId: 'C1',
     roomId: 'R1',
     courseId: 'M104',
-    startTime: '2024-12-24T08:00:00',
-    endTime: '2024-12-24T11:00:00',
+    startTime: '2024-12-22T08:00:00',
+    endTime: '2024-12-22T11:00:00',
   },
   {
     id: 14,
@@ -136,8 +161,8 @@ const _schedules = [
     classId: 'C2',
     roomId: 'R2',
     courseId: 'P204',
-    startTime: '2024-12-24T11:15:00', // 15 minutes pause
-    endTime: '2024-12-24T14:15:00',
+    startTime: '2024-12-22T08:00:00', // Overlapping with Math 104
+    endTime: '2024-12-22T11:00:00',
   },
   {
     id: 15,
@@ -146,8 +171,8 @@ const _schedules = [
     classId: 'C3',
     roomId: 'R3',
     courseId: 'C104',
-    startTime: '2024-12-24T14:30:00', // 15 minutes pause
-    endTime: '2024-12-24T17:30:00',
+    startTime: '2024-12-22T11:15:00', // 15 minutes pause
+    endTime: '2024-12-22T14:15:00',
   },
   {
     id: 16,
@@ -156,8 +181,8 @@ const _schedules = [
     classId: 'C4',
     roomId: 'R4',
     courseId: 'B104',
-    startTime: '2024-12-25T08:00:00',
-    endTime: '2024-12-25T11:00:00',
+    startTime: '2024-12-22T11:15:00', // Overlapping with Chemistry 104
+    endTime: '2024-12-22T14:15:00',
   },
   {
     id: 17,
@@ -166,8 +191,8 @@ const _schedules = [
     classId: 'C1',
     roomId: 'R1',
     courseId: 'M105',
-    startTime: '2024-12-25T11:15:00', // 15 minutes pause
-    endTime: '2024-12-25T14:15:00',
+    startTime: '2024-12-22T14:30:00', // 15 minutes pause
+    endTime: '2024-12-22T17:30:00',
   },
   {
     id: 18,
@@ -176,8 +201,8 @@ const _schedules = [
     classId: 'C2',
     roomId: 'R2',
     courseId: 'P205',
-    startTime: '2024-12-25T14:30:00', // 15 minutes pause
-    endTime: '2024-12-25T17:30:00',
+    startTime: '2024-12-22T14:30:00', // Overlapping with Math 105
+    endTime: '2024-12-22T17:30:00',
   },
   {
     id: 19,
@@ -186,8 +211,18 @@ const _schedules = [
     classId: 'C3',
     roomId: 'R3',
     courseId: 'C105',
-    startTime: '2024-12-26T08:00:00',
-    endTime: '2024-12-26T11:00:00',
+    startTime: '2024-12-23T08:00:00',
+    endTime: '2024-12-23T11:00:00',
+  },
+  {
+    id: 21,
+    title: 'alchimy 102',
+    description: 'Alchemy',
+    classId: 'C3',
+    roomId: 'R3',
+    courseId: 'C105',
+    startTime: '2024-12-24T08:00:00',
+    endTime: '2024-12-24T11:00:00',
   },
   {
     id: 20,
@@ -196,9 +231,10 @@ const _schedules = [
     classId: 'C4',
     roomId: 'R4',
     courseId: 'B105',
-    startTime: '2024-12-26T11:15:00', // 15 minutes pause
-    endTime: '2024-12-26T14:15:00',
+    startTime: '2024-12-23T08:00:00', // Overlapping with Chemistry 105
+    endTime: '2024-12-23T11:00:00',
   },
 ]
 
 export const schedules = _schedules
+export const scheduleMap = _scheduleMap
