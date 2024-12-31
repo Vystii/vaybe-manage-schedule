@@ -4,7 +4,7 @@
     <DataTable :value="timeSlots">
       <Column field="time" header="Time">
         <template #body="slotProps">
-          {{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}
+          <div class="py-5">{{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}</div>
         </template>
       </Column>
       <Column v-for="day in weekdays" :key="day" :field="day" :header="day">
@@ -111,12 +111,16 @@ export default {
   name: 'App',
   props: {
     schedule_source: {
-      type: String,
+      type: Object,
       default: '/scheduling/api/schedules',
     },
     course_url: {
       type: String,
       default: '/course-manager/course/[id]',
+    },
+    csrf_token: {
+      type: String,
+      required: true,
     },
   },
   components: {
@@ -181,7 +185,6 @@ export default {
       }
 
       this.timeSlots = timeSlots
-      console.log('Generated Time Slots:', this.timeSlots)
 
       // Call generateSchedule after building timeslots
       this.generateSchedule()
@@ -194,9 +197,10 @@ export default {
     generateSchedule() {
       if (!this.schedules.length || !this.timeSlots.length) return
 
-      this.schedules.forEach((schedule) => {
+      this.schedules.forEach((schedule: Schedule) => {
+        console.log('a schedule: ', schedule)
         const scheduleStart = schedule.startTime
-        const fullWeekday = this.weekdayMap[schedule.weekday] // Map abbreviated weekday to full weekday name
+        const fullWeekday = this.weekdayMap[schedule.weekday!] // Map abbreviated weekday to full weekday name
 
         const matchingTimeSlot = this.timeSlots.find((slot) => slot.time.start === scheduleStart)
         if (matchingTimeSlot) {
@@ -208,15 +212,13 @@ export default {
           }
         }
       })
-
-      console.log('Generated Schedule with Timeslots:', this.timeSlots)
     },
     fetchSettings(settingsId: number) {
       axios
         .get(`/scheduling/api/settings/${settingsId}`)
         .then((response) => {
           this.settings = response.data as Settings
-          console.log('django Settings successfully:', response.data)
+          // console.log('django Settings successfully:', response.data)
           // Call buildDataTable after fetching settings
           this.buildDataTable()
         })
@@ -225,39 +227,45 @@ export default {
         })
     },
     fetchSchedules() {
-      console.log('fecteching schedules', this.schedule_source)
-      axios.get(this.schedule_source).then((response) => {
-        // this.schedules = response.data
-        // Simulate fetching schedules
-        console.log('reponse: ', response)
-        this.schedules = response.data.map((item: DBSchedule) => {
-          const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-          const startTime = new Date(item.timeSlot.startTime)
-          const endTime = new Date(item.timeSlot.endTime)
-          // const options = { weekday: 'short' as const } // Define options for formatting weekday
-          const weekday = weekdays[item.timeSlot.dayOfWeek] // Extract abbreviated weekday
-          const startHour = startTime.getHours()
-          const startMinute = startTime.getMinutes()
-          const endHour = endTime.getHours()
-          const endMinute = endTime.getMinutes()
+      // console.log('fecteching schedules', this.schedule_source.url)
+      axios
+        .post(
+          this.schedule_source.url,
+          { course_ids: this.schedule_source.body },
+          {
+            headers: {
+              'X-CSRFToken': this.csrf_token,
+            },
+          },
+        )
+        .then((response) => {
+          this.schedules = response.data.map((item: DBSchedule) => {
+            const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            const startTime = new Date(item.timeSlot.startTime)
+            const endTime = new Date(item.timeSlot.endTime)
+            // const options = { weekday: 'short' as const } // Define options for formatting weekday
+            const weekday = weekdays[item.timeSlot.dayOfWeek] // Extract abbreviated weekday
+            const startHour = startTime.getHours()
+            const startMinute = startTime.getMinutes()
+            const endHour = endTime.getHours()
+            const endMinute = endTime.getMinutes()
 
-          return {
-            id: item.id,
-            title: item.title,
-            description: item.title,
-            weekday: weekday,
-            courseId: item.courseId,
-            roomId: item.room.id,
-            classId: item.classId,
-            startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
-            endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
-          }
+            return {
+              id: item.id,
+              title: item.title,
+              description: item.title,
+              weekday: weekday,
+              courseId: item.courseId,
+              roomId: item.room.id,
+              classId: item.classId,
+              startTime: `${startHour}:${startMinute.toString().padStart(2, '0')}`,
+              endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
+            }
+          })
+          // console.log('Schedules django successfully:', this.schedules)
         })
-        console.log('Schedules django successfully:', this.schedules)
-      })
     },
     openDialog(data: SlotProp[]) {
-      console.log(data)
       this.dialogData = this.schedules.filter((schedule) => {
         let found = false
         let i = 0
