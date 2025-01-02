@@ -1,54 +1,69 @@
 <template>
-  <!-- Table for displaying timeslot and schedules -->
-  <div v-if="timeSlots.length > 0">
-    <DataTable :value="timeSlots">
-      <Column field="time" header="Time">
-        <template #body="slotProps">
-          <div class="py-5">{{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}</div>
-        </template>
-      </Column>
-      <Column v-for="day in weekdays" :key="day" :field="day" :header="day">
-        <template #body="slotProps">
-          <div
-            v-if="slotProps.data[day] && slotProps.data[day].length > 0"
-            @click="openDialog(slotProps.data[day])"
-          >
-            <div v-for="cell_schedule in slotProps.data[day]" :key="cell_schedule.id">
-              {{ cell_schedule.description }}
+  <div v-if="!hasError" class="app-table-container">
+    <!-- Table for displaying timeslot and schedules -->
+    <div v-if="!loading" class="table-content">
+      <div v-if="timeSlots.length > 0">
+        <DataTable :value="timeSlots">
+          <Column field="time" header="Time">
+            <template #body="slotProps">
+              <div class="py-5">
+                {{ slotProps.data.time.start }} - {{ slotProps.data.time.end }}
+              </div>
+            </template>
+          </Column>
+          <Column v-for="day in weekdays" :key="day" :field="day" :header="day">
+            <template #body="slotProps">
+              <div
+                v-if="slotProps.data[day] && slotProps.data[day].length > 0"
+                @click="openDialog(slotProps.data[day])"
+              >
+                <div v-for="cell_schedule in slotProps.data[day]" :key="cell_schedule.id">
+                  {{ cell_schedule.description }}
+                </div>
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+      <div v-else class="loader"></div>
+      <!-- Dialog for showing course details -->
+      <Dialog v-model:visible="dialogVisible" modal>
+        <template v-if="dialogData.length === 1">
+          <div class="model-content space-inner-px space-inner-py pt-5">
+            <h2>{{ dialogData[0].title }}</h2>
+            <div class="d-flex w-min-20 py-3 justify-content-between modal-content-row">
+              <span class="fw-bold">Room:</span> <span>{{ dialogData[0].roomId }}</span>
             </div>
+            <div class="d-flex w-min-20 py-3 justify-content-between modal-content-row">
+              <span class="fw-bold">Class:</span> <span>{{ dialogData[0].classId }}</span>
+            </div>
+            <!-- ajout d'un bouton -->
+
+            <button
+              class="btn btn-primary d-block mx-auto text-white fw-bolder px-5 border-radius-10 mt-5"
+              v-if="course_url"
+              @click="openCourse(dialogData[0].courseId)"
+            >
+              see more
+            </button>
           </div>
         </template>
-      </Column>
-    </DataTable>
+        <template v-else>
+          <div v-for="course in dialogData" :key="course.id" @click="openDialog([course])">
+            <h2>{{ course.title }}</h2>
+          </div>
+        </template>
+      </Dialog>
+    </div>
   </div>
-
-  <!-- Dialog for showing course details -->
-  <Dialog v-model:visible="dialogVisible" modal>
-    <template v-if="dialogData.length === 1">
-      <div class="model-content space-inner-px space-inner-py pt-5">
-        <h2>{{ dialogData[0].title }}</h2>
-        <div class="d-flex justify-content-between modal-content-row">
-          <span class="fw-bold">Room:</span> <span>{{ dialogData[0].roomId }}</span>
-        </div>
-        <div class="d-flex justify-content-between modal-content-row">
-          <span class="fw-bold">Class:</span> <span>{{ dialogData[0].classId }}</span>
-        </div>
-        <!-- ajout d'un bouton -->
-        <button
-          class="btn btn-primary text-white fw-bolder px-5 border-radius-10 mt-5"
-          v-if="course_url"
-          @click="openCourse(dialogData[0].courseId)"
-        >
-          see more
-        </button>
-      </div>
-    </template>
-    <template v-else>
-      <div v-for="course in dialogData" :key="course.id" @click="openDialog([course])">
-        <h2>{{ course.title }}</h2>
-      </div>
-    </template>
-  </Dialog>
+  <div
+    v-else
+    class="error-panel h-min-25 bg-warning-subtle d-flex align-items-center justify-content-center"
+  >
+    <div class="fw-bold fs-3">
+      <span> Something went wrong </span>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
@@ -145,6 +160,8 @@ export default {
         Sun: 'Sunday',
       } as Record<string, string>,
       dialogVisible: false,
+      hasError: false,
+      loading: true,
       dialogData: [] as Schedule[],
     }
   },
@@ -220,10 +237,11 @@ export default {
           this.settings = response.data as Settings
           // console.log('django Settings successfully:', response.data)
           // Call buildDataTable after fetching settings
-          this.buildDataTable()
+          this.fetchSchedules()
         })
         .catch((error) => {
           console.error('Error fetching settings:', error)
+          this.hasError = true
         })
     },
     fetchSchedules() {
@@ -239,6 +257,7 @@ export default {
           },
         )
         .then((response) => {
+          this.loading = false
           this.schedules = response.data.map((item: DBSchedule) => {
             const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
             const startTime = new Date(item.timeSlot.startTime)
@@ -262,7 +281,11 @@ export default {
               endTime: `${endHour}:${endMinute.toString().padStart(2, '0')}`,
             }
           })
-          // console.log('Schedules django successfully:', this.schedules)
+          this.buildDataTable()
+        })
+        .catch((error) => {
+          console.log('something went wrong', error)
+          this.hasError = true
         })
     },
     openDialog(data: SlotProp[]) {
@@ -287,7 +310,12 @@ export default {
   },
   mounted() {
     this.fetchSettings(1)
-    this.fetchSchedules()
+    // this.fetchSchedules()
   },
 }
 </script>
+<style scoped>
+.error-panel {
+  min-height: 25rem;
+}
+</style>
